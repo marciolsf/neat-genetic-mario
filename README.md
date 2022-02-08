@@ -1,3 +1,17 @@
+# More Tinkering!
+
+I've always wanted to learn more about ML, and this sounded like a good starting step. After spending some quality time with this project, my goals are:
+
+* [ ] tweak the forms UI a bit so information is easier to see - in progress
+* [ ] implement ways to export the data so we can track progress - in progress
+* [ ] export completed runs as movie files
+* [ ] get the save/load functionality working
+
+
+
+
+## Readme from [original repository][2]
+
 # Neat[Tinkering]
 Update to [Seth Bling's Mar I/O][1] lua code, forked from [mam91/Neat-Genetic-Mario][2].
 
@@ -16,7 +30,6 @@ Update to [Seth Bling's Mar I/O][1] lua code, forked from [mam91/Neat-Genetic-Ma
 * [ ] Let the **Restart** button appear again.
 * [ ] Reorganize the control form.
 
-## Readme from [original repository][2]
 > Added coins/score/damage to fitness calculation.
 >
 > Added version with weighted distance: added circle around mario where enemies inside the circle are treated as most important and enemies 

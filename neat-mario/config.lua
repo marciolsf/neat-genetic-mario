@@ -4,7 +4,7 @@ local _M = {}
 	Change BizhawkDir to your BizHawk directory.
 --]]
 --_M.BizhawkDir = "C:/Users/mmill/Downloads/BizHawk-2.2/"
-_M.BizhawkDir = "X:/B2_BizHawkLab/BizHawk-2.2.2/"
+_M.BizhawkDir = "C:/Users/iamma/OneDrive/EveryLastGame/BizHawk-2.4.1/"
 
 _M.StateDir = _M.BizhawkDir .. "Lua/SNES/neat-mario/state/"
 _M.PoolDir = _M.BizhawkDir .. "Lua/SNES/neat-mario/pool/"
@@ -32,7 +32,7 @@ _M.StartPowerup = 0
 _M.NeatConfig = {
 --Filename = "DP1.state",
 Filename = _M.PoolDir .. _M.State[1],
-Population = 300,
+Population = 300, 
 DeltaDisjoint = 2.0,
 DeltaWeights = 0.4,
 DeltaThreshold = 1.0,
@@ -48,6 +48,7 @@ DisableMutationChance = 0.4,
 EnableMutationChance = 0.2,
 TimeoutConstant = 20,
 MaxNodes = 1000000,
+coinWeight = 50,
 }
 
 _M.ButtonNames = {
