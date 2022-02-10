@@ -10,7 +10,27 @@ board = require "board"
 Inputs = config.InputSize+1
 Outputs = #config.ButtonNames
 
+function createNewCSV(filename, datastring)
+	local file = io.open(filename, 'w')
+	if file ~= nil then 
+	file:write(datastring)
+	file:close()
+	else 
+	console.writeline("Unable to open file: " .. filename)
+	end
+ end
 
+
+
+function appendToCSV(filename, datastring)
+	local file = io.open(filename, 'a')
+	if file ~= nil then
+		file:write(datastring)
+		file:close()
+	else
+	console.writeline("Unable to open file: " .. filename)
+	end
+ end
 
 function newInnovation()
 	pool.innovation = pool.innovation + 1
@@ -631,7 +651,7 @@ function newGeneration()
 	pool.generation = pool.generation + 1
 	
 	--writeFile("backup." .. pool.generation .. "." .. forms.gettext(saveLoadFile))
-	writeFile(forms.gettext(saveLoadFile) .. ".gen" .. pool.generation .. ".pool")
+	writeFile(forms.gettext(saveLoadFile) .. ".gen" .. pool.generation .. ".pool") --Marcio
 end
 	
 function initializePool()
@@ -693,8 +713,8 @@ end
 
 
 
-form = forms.newform(600, 600, "Mario-Neat")
-netPicture = forms.pictureBox(form, 5, 175, 530, 350)
+form = forms.newform(600, 570, "Mario-Neat")
+netPicture = forms.pictureBox(form, 5, 175, 575, 350)
 
 
 
@@ -731,19 +751,32 @@ saveButton = forms.button(form, "Save", savePool, 5, 102)
 loadButton = forms.button(form, "Load", loadPool, 80, 102)
 playTopButton = forms.button(form, "Play Top", playTop, 230, 102)
 
-saveLoadFile = forms.textbox(form, config.NeatConfig.Filename .. ".pool", 530, 25, nil, 5, 148)
+saveLoadFile = forms.textbox(form, config.NeatConfig.Filename .. ".pool", 575, 25, nil, 5, 148)
 saveLoadLabel = forms.label(form, "Save/Load:", 7, 129)
 spritelist.InitSpriteList()
 spritelist.InitExtSpriteList()
+
+
+
+
+
+local FileName = "Exports\\RunStats_" .. os.date("%d%m%Y_%I%M%S")
+
+ createNewCSV(FileName .. ".csv", "Gen, species, genome, current fitness, max fitness,"
+ .. "Average Gen Fitness, Coin Bonus, Frame Count, Beat Game\n");
+
+
 
 --[[Main game loop
 Everything in this loop runs on every fram
 ]]
 
 --console.writeline("Gen " .. pool.generation .. " species " .. pool.currentSpecies  .. " genome " .. pool.currentGenome .. " current fitness: " .. fitness .. " max fitness: " .. pool.maxFitness .. " Coin Bonus: " .. pool.coinBonus .. " Frame Count: " .. pool.currentFrame)
-console.writeline("Gen, species, genome, current fitness, max fitness, Average Gen Fitness, Coin Bonus, Frame Count, Beat Game")
+--console.writeline("Gen, species, genome, current fitness, max fitness, Average Gen Fitness, Coin Bonus, Frame Count, Beat Game")
 while true do
 	
+
+
 	if config.Running == true then
 
 	local species = pool.species[pool.currentSpecies]
@@ -799,7 +832,7 @@ while true do
 
 		--local coinScoreFitness = (coins * 50) + (score * 0.2)
 		coinWeight = config.NeatConfig.coinWeight
-		--coinWeight = 50
+		
 		local coinScoreFitness = (coins * coinWeight) + (score * 0.2)
 		if (coins + score) > 0 then
 			pool.coinBonus = coins + score 
@@ -822,7 +855,7 @@ while true do
 		if rightmost > 4816 then
 			beatGame = 1
 			fitness = fitness + 1000
-			--console.writeline("!!!!!!Beat level!!!!!!!")
+			console.writeline("!!!!!!Beat level!!!!!!!")
 		end
 		if fitness == 0 then
 			fitness = -1
@@ -830,7 +863,7 @@ while true do
 		genome.fitness = fitness
 		
 		if fitness > pool.maxFitness then
-			--console.writeline("MarI/O's fitness evolved from " .. pool.maxFitness .. " to " .. fitness)
+			console.writeline("MarI/O's fitness evolved from " .. pool.maxFitness .. " to " .. fitness)
 			pool.maxFitness = fitness
 			--writeFile("backup." .. pool.generation .. "." .. forms.gettext(saveLoadFile))
 			writeFile(forms.gettext(saveLoadFile) .. ".gen" .. pool.generation .. ".pool")
@@ -846,7 +879,8 @@ while true do
 
 
 		--Also added a few more bits of information for better context
-		console.writeline(pool.generation .. ", " .. pool.currentSpecies  .. ", " .. pool.currentGenome .. ", " .. fitness .. ", " .. pool.maxFitness .. ", " .. pool.averageFitness .. ", " .. pool.coinBonus .. ", " .. pool.currentFrame .. ", " .. beatGame)
+		--console.writeline(pool.generation .. ", " .. pool.currentSpecies  .. ", " .. pool.currentGenome .. ", " .. fitness .. ", " .. pool.maxFitness .. ", " .. pool.averageFitness .. ", " .. pool.coinBonus .. ", " .. pool.currentFrame .. ", " .. beatGame)
+		appendToCSV(FileName .. ".csv", pool.generation .. ", " .. pool.currentSpecies  .. ", " .. pool.currentGenome .. ", " .. fitness .. ", " .. pool.maxFitness .. ", " .. pool.averageFitness .. ", " .. pool.coinBonus .. ", " .. pool.currentFrame .. ", " .. beatGame .. "\n")
 		--gui.drawText(100,100,"Gen " .. pool.generation .. " genome " .. pool.currentGenome  .. " species " .. pool.currentSpecies .. " current fitness: " .. fitness .. " max fitness: " .. pool.maxFitness .. " Coin Bonus: " .. pool.coinBonus .. " Frame Count: " .. pool.currentFrame)
 
 		
