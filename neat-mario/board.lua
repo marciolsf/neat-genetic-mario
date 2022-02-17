@@ -181,18 +181,6 @@ print(filename)
 writeFile(filename)
 end
 
-function mysplit(inputstr, sep)
-	if sep == nil then
-			sep = "%s"
-	end
-	local t={} ; i=1
-	for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
-			t[i] = str
-			i = i + 1
-	end
-	return t
-end
-
 
 function loadFile(filename)
 	print("Loading pool from " .. filename)
@@ -258,19 +246,8 @@ function loadFile(filename)
 end
 
 
-function flipState()
-	if config.Running == true then
-		config.Running = false
-		forms.settext(startButton, "Start")
-	else
-		config.Running = true
-		forms.settext(startButton, "Stop")
-	end
-end
- 
 function loadPool()
 	filename = forms.openfile("DP1.state.pool",config.PoolDir) 
-	--local filename = forms.gettext(saveLoadFile)
 	forms.settext(saveLoadFile, filename)
 	loadFile(filename)
 end
@@ -298,7 +275,7 @@ function playTop()
 end
 
 function initializeRun()
-	savestate.load(config.NeatConfig.Filename);
+	savestate.load(config.NeatConfig.StateFileName);
 	if config.StartPowerup ~= NIL then
 		game.writePowerup(config.StartPowerup)
 	end
@@ -317,4 +294,26 @@ function initializeRun()
 	local genome = species.genomes[pool.currentGenome]
 	generateNetwork(genome)
 	evaluateCurrent()
+end
+
+function mysplit(inputstr, sep)
+	if sep == nil then
+			sep = "%s"
+	end
+	local t={} ; i=1
+	for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
+			t[i] = str
+			i = i + 1
+	end
+	return t
+end
+
+function flipState()
+	if config.Running == true then
+		config.Running = false
+		forms.settext(startButton, "Start")
+	else
+		config.Running = true
+		forms.settext(startButton, "Stop")
+	end
 end

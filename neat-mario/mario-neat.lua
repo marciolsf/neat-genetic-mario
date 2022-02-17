@@ -6,19 +6,53 @@ game = require "game"
 mathFunctions = require "mathFunctions"
 board = require "board"
 --genome = require "genome"
+require("smw-bizhawk")
+
+
+--Equally shamelessly borrowed from Dwood15 so I get level info
+-- as well as a few other very smart bits
+local mainmemory = mainmemory
+
+-- Compatibility
+local u8  = mainmemory.read_u8
+local s8  = mainmemory.read_s8
+local u16 = mainmemory.read_u16_le
+local s16 = mainmemory.read_s16_le
+local u24 = mainmemory.read_u24_le
+local s24 = mainmemory.read_s24_le
+local WRAM = WRAM
+local SMW = SMW
+
+function getCurrentRoom()
+	return bit.lshift(u8(WRAM.room_index), 16) + bit.lshift(u8(WRAM.room_index + 1), 8) + u8(WRAM.room_index + 2)
+end
+
+local function getLevelStats()
+	return u8(WRAM.level_index), u8(WRAM.game_mode), u8(WRAM.end_level_timer), getCurrentRoom()
+end 
+
+local Current_Level_Index, game_mode, End_Level_Timer, CurrentRoomID = getLevelStats()
+
+--read_screens is in smw-bizhawk
+local give_fitBonus = false
+local levelType, currLevelScreenCount, hScreenCurrent, hScreenCurrCount, vScreenCurrent, vScreenCurrCount = read_screens()
+
+function getPlayerStats()
+	return s16(WRAM.x), s16(WRAM.y), u24(WRAM.mario_score), u8(WRAM.game_over_time_out_flag), u8(WRAM.exit_level_byte), u8(WRAM.mario_lives)
+end
 
 Inputs = config.InputSize+1
 Outputs = #config.ButtonNames
 
-function createNewCSV(filename, datastring)
-	local file = io.open(filename, 'w')
+function createNewCSV(csvFileName, datastring)
+	local file = io.open(csvFileName, 'w')
 	if file ~= nil then 
 	file:write(datastring)
 	file:close()
 	else 
-	console.writeline("Unable to open file: " .. filename)
+	console.writeline("Unable to open file: " .. csvFileName)
 	end
- end
+end
 
 
 
@@ -28,9 +62,9 @@ function appendToCSV(filename, datastring)
 		file:write(datastring)
 		file:close()
 	else
-	console.writeline("Unable to open file: " .. filename)
+	console.writeline("Unable to open file: " .. csvFileName)
 	end
- end
+end
 
 function newInnovation()
 	pool.innovation = pool.innovation + 1
@@ -651,7 +685,8 @@ function newGeneration()
 	pool.generation = pool.generation + 1
 	
 	--writeFile("backup." .. pool.generation .. "." .. forms.gettext(saveLoadFile))
-	writeFile(forms.gettext(saveLoadFile) .. ".gen" .. pool.generation .. ".pool") --Marcio
+	console.writeline("Starting new generation for for gen " .. pool.generation)
+	writeFile(forms.gettext(saveLoadFile) .. ".gen" .. pool.generation .. ".pool")
 end
 	
 function initializePool()
@@ -723,11 +758,13 @@ function onExit()
 	forms.destroy(form)
 end
 
+console.writeline ("Starting new temp.pool file.")
 writeFile(config.PoolDir.."temp.pool")
 
 event.onexit(onExit)
 
 --[[Initialize form]]
+
 
 GenerationLabel = forms.label(form, "Generation: " .. pool.generation, 5, 5)
 SpeciesLabel = forms.label(form, "Species: " .. pool.currentSpecies, 130, 5)
@@ -736,13 +773,18 @@ MeasuredLabel = forms.label(form, "Measured: " .. "", 330, 5)
 
 FitnessLabel = forms.label(form, "Fitness: " .. "", 5, 30)
 MaxLabel = forms.label(form, "Max: " .. "", 130, 30)
---averageFitnessLabel = forms.label(form, "Average Fitness: " .. "", 230, 30)
+averageFitnessLabel = forms.label(form, "Average Fitness: " .. "", 230, 30)
+
+roomIDLabel = forms.label(form,"Level Index: " .. "", 375, 30 )
 
 CoinsLabel = forms.label(form, "Coins: " .. "", 5, 65)
 ScoreLabel = forms.label(form, "Score: " .. "", 130, 65, 90, 14)
-LivesLabel = forms.label(form, "Lives: " .. "", 130, 80, 90, 14)
 DmgLabel = forms.label(form, "Damage: " .. "", 230, 65, 110, 14)
+marioRightLabel = forms.label(form, "Right: " .. "", 400, 65, 90, 14)
+
+LivesLabel = forms.label(form, "Lives: " .. "", 130, 80, 90, 14)
 PowerUpLabel = forms.label(form, "PowerUp: " .. "", 230, 80, 110, 14)
+marioLeftLabel = forms.label(form, "Left: " .. "", 400, 80, 90, 14)
 
 startButton = forms.button(form, "Start", flipState, 155, 102)
 
@@ -760,10 +802,10 @@ spritelist.InitExtSpriteList()
 
 
 
-local FileName = "Exports\\RunStats_" .. os.date("%d%m%Y_%I%M%S")
+local csvFileName = "Exports\\RunStats_" .. os.date("%d%m%Y_%I%M%S")
 
- createNewCSV(FileName .. ".csv", "Gen, species, genome, current fitness, max fitness,"
- .. "Average Gen Fitness, Coin Bonus, Frame Count, Beat Game\n");
+createNewCSV(csvFileName .. ".csv", "Gen, species, genome, current fitness, max fitness,"
+.. "Average Gen Fitness, Coin Bonus, Frame Count, Beat Game\n");
 
 
 
@@ -778,6 +820,15 @@ while true do
 
 
 	if config.Running == true then
+
+	--Current_Level_Index, game_mode, End_Level_Timer, CurrentRoomID = getLevelStats()
+	--console.writeline(Current_Level_Index .. " - " .. game_mode .. " - " .. End_Level_Timer .. " - " .. CurrentRoomID)
+	--21 - 20 - 0 - 14009863
+
+
+	forms.settext(roomIDLabel, "Level Index: " .. getCurrentRoom())
+
+
 
 	local species = pool.species[pool.currentSpecies]
 	local genome = species.genomes[pool.currentGenome]
@@ -841,8 +892,23 @@ while true do
 		
 		local hitPenalty = marioHitCounter * 100
 		local powerUpBonus = powerUpCounter * 100
+
+		--local leftWeight = config.NeatConfig.leftWeight
 	
-		local fitness = coinScoreFitness - hitPenalty + powerUpBonus + rightmost - pool.currentFrame / 2
+
+		forms.settext(marioLeftLabel, "Left: " .. marioY)
+		forms.settext(marioRightLabel, "Right: " .. marioX)
+
+
+		--console.writeline("MarioX: " .. marioX .. " MarioY: " .. marioY .. " Rightmost: " .. rightmost)
+		if game_mode ~= SMW.game_mode_overworld then
+			local fitness = coinScoreFitness - hitPenalty + powerUpBonus + rightmost - pool.currentFrame / 2
+			--local fitness = coinScoreFitness - hitPenalty + powerUpBonus + (rightmost + (marioY * leftWeight)) - pool.currentFrame / 2
+		else
+			local fitness = (marioX) * 100 - pool.currentFrame / 2
+		end
+
+
 
 		if startLives < Lives then
 			local ExtraLiveBonus = (Lives - startLives)*1000
@@ -863,9 +929,10 @@ while true do
 		genome.fitness = fitness
 		
 		if fitness > pool.maxFitness then
-			console.writeline("MarI/O's fitness evolved from " .. pool.maxFitness .. " to " .. fitness)
+			console.writeline("MarI/O's fitness evolved from " .. pool.maxFitness .. " to " .. fitness .. " Gen " .. pool.generation)
 			pool.maxFitness = fitness
 			--writeFile("backup." .. pool.generation .. "." .. forms.gettext(saveLoadFile))
+			console.writeline("Fitness exceeded maxFitness, saving pool file version " .. pool.generation)
 			writeFile(forms.gettext(saveLoadFile) .. ".gen" .. pool.generation .. ".pool")
 			
 		end
@@ -876,10 +943,11 @@ while true do
 		avgSum = totalAverageFitness()
 		pool.averageFitness = avgSum
 		--console.writeline("Pool average fitness = " .. avgSum)
+		forms.settext(averageFitnessLabel, "Average Fitness: " .. math.floor(avgSum))
+
 
 
 		--Also added a few more bits of information for better context
-		--console.writeline(pool.generation .. ", " .. pool.currentSpecies  .. ", " .. pool.currentGenome .. ", " .. fitness .. ", " .. pool.maxFitness .. ", " .. pool.averageFitness .. ", " .. pool.coinBonus .. ", " .. pool.currentFrame .. ", " .. beatGame)
 		appendToCSV(FileName .. ".csv", pool.generation .. ", " .. pool.currentSpecies  .. ", " .. pool.currentGenome .. ", " .. fitness .. ", " .. pool.maxFitness .. ", " .. pool.averageFitness .. ", " .. pool.coinBonus .. ", " .. pool.currentFrame .. ", " .. beatGame .. "\n")
 		--gui.drawText(100,100,"Gen " .. pool.generation .. " genome " .. pool.currentGenome  .. " species " .. pool.currentSpecies .. " current fitness: " .. fitness .. " max fitness: " .. pool.maxFitness .. " Coin Bonus: " .. pool.coinBonus .. " Frame Count: " .. pool.currentFrame)
 
@@ -889,7 +957,10 @@ while true do
 		while fitnessAlreadyMeasured() do
 			nextGenome()
 		end
-		initializeRun()
+
+		if beatGame == 0 then 
+			initializeRun() --only reload the state if we haven't beat the level
+		end
 	end
 
 	local measured = 0
@@ -904,15 +975,16 @@ while true do
 	end
 	
 
+	Current_Level_Index, game_mode, End_Level_Timer, CurrentRoomID = getLevelStats()
 
 
-	gui.drawEllipse(game.screenX-84, game.screenY-84, 192, 192, 0x50000000) 
+	--gui.drawEllipse(game.screenX-84, game.screenY-84, 192, 192, 0x50000000) 
 	forms.settext(FitnessLabel, "Fitness: " .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3))
 	forms.settext(GenerationLabel, "Generation: " .. pool.generation)
 	forms.settext(SpeciesLabel, "Species: " .. pool.currentSpecies)
 	forms.settext(GenomeLabel, "Genome: " .. pool.currentGenome)
 	forms.settext(MaxLabel, "Max: " .. math.floor(pool.maxFitness))
-	--forms.settext(averageFitnessLabel, "Average Fitness: " .. math.floor(avgSum))
+	forms.settext(roomIDLabel, "Level Index: " .. Current_Level_Index)
 	forms.settext(MeasuredLabel, "Measured: " .. math.floor(measured/total*100) .. "%")
 	forms.settext(CoinsLabel, "Coins: " .. (game.getCoins() - startCoins))
 	forms.settext(ScoreLabel, "Score: " .. (game.getScore() - startScore))

@@ -14,9 +14,11 @@ _M.PoolDir = _M.BizhawkDir .. "Lua/SNES/neat-mario/pool/"
 	Rearrange for other savestates. (will be redone soon)
 --]]
 _M.State = {
- 			"DP1.state",				-- Donut Plains 1
-			"YI1.state",				-- Yoshi's Island 1
-			"YI2.state",				-- Yoshi's Island 2
+	"YI1.state",				-- Yoshi's Island 1			
+	"Overworld.state",			
+				"Intro.state",
+				"DP1.state",				-- Donut Plains 1
+				"YI2.state",				-- Yoshi's Island 2
 }
 
 --[[
@@ -31,6 +33,7 @@ _M.StartPowerup = 0
 
 _M.NeatConfig = {
 --Filename = "DP1.state",
+StateFileName = _M.StateDir .. _M.State[1],
 Filename = _M.PoolDir .. _M.State[1],
 Population = 300, 
 DeltaDisjoint = 2.0,
@@ -46,9 +49,11 @@ BiasMutationChance = 0.40,
 StepSize = 0.1,
 DisableMutationChance = 0.4,
 EnableMutationChance = 0.2,
+overworldTimeoutConstant = 50,
 TimeoutConstant = 20,
 MaxNodes = 1000000,
 coinWeight = 50,
+leftWeight = 1,
 }
 
 _M.ButtonNames = {
