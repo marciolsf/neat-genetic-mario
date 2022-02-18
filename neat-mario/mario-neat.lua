@@ -684,8 +684,7 @@ function newGeneration()
 	
 	pool.generation = pool.generation + 1
 	
-	--writeFile("backup." .. pool.generation .. "." .. forms.gettext(saveLoadFile))
-	console.writeline("Starting new generation for for gen " .. pool.generation)
+	console.writeline("Starting new generation for gen " .. pool.generation)
 	writeFile(forms.gettext(saveLoadFile) .. ".gen" .. pool.generation .. ".pool")
 end
 	
@@ -902,10 +901,10 @@ while true do
 
 		--console.writeline("MarioX: " .. marioX .. " MarioY: " .. marioY .. " Rightmost: " .. rightmost)
 		if game_mode ~= SMW.game_mode_overworld then
-			local fitness = coinScoreFitness - hitPenalty + powerUpBonus + rightmost - pool.currentFrame / 2
+			fitness = coinScoreFitness - hitPenalty + powerUpBonus + rightmost - pool.currentFrame / 2
 			--local fitness = coinScoreFitness - hitPenalty + powerUpBonus + (rightmost + (marioY * leftWeight)) - pool.currentFrame / 2
 		else
-			local fitness = (marioX) * 100 - pool.currentFrame / 2
+			fitness = (marioX) * 100 - pool.currentFrame / 2
 		end
 
 
@@ -927,12 +926,12 @@ while true do
 			fitness = -1
 		end
 		genome.fitness = fitness
+
 		
 		if fitness > pool.maxFitness then
 			console.writeline("MarI/O's fitness evolved from " .. pool.maxFitness .. " to " .. fitness .. " Gen " .. pool.generation)
 			pool.maxFitness = fitness
-			--writeFile("backup." .. pool.generation .. "." .. forms.gettext(saveLoadFile))
-			console.writeline("Fitness exceeded maxFitness, saving pool file version " .. pool.generation)
+			console.writeline("Saving pool file version " .. pool.generation)
 			writeFile(forms.gettext(saveLoadFile) .. ".gen" .. pool.generation .. ".pool")
 			
 		end
@@ -948,7 +947,7 @@ while true do
 
 
 		--Also added a few more bits of information for better context
-		appendToCSV(FileName .. ".csv", pool.generation .. ", " .. pool.currentSpecies  .. ", " .. pool.currentGenome .. ", " .. fitness .. ", " .. pool.maxFitness .. ", " .. pool.averageFitness .. ", " .. pool.coinBonus .. ", " .. pool.currentFrame .. ", " .. beatGame .. "\n")
+		appendToCSV(csvFileName .. ".csv", pool.generation .. ", " .. pool.currentSpecies  .. ", " .. pool.currentGenome .. ", " .. fitness .. ", " .. pool.maxFitness .. ", " .. pool.averageFitness .. ", " .. pool.coinBonus .. ", " .. pool.currentFrame .. ", " .. beatGame .. "\n")
 		--gui.drawText(100,100,"Gen " .. pool.generation .. " genome " .. pool.currentGenome  .. " species " .. pool.currentSpecies .. " current fitness: " .. fitness .. " max fitness: " .. pool.maxFitness .. " Coin Bonus: " .. pool.coinBonus .. " Frame Count: " .. pool.currentFrame)
 
 		
