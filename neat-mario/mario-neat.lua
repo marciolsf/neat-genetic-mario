@@ -682,9 +682,7 @@ function newGeneration()
 		addToSpecies(child)
 	end
 	
-	pool.generation = pool.generation + 1
-	
-	console.writeline("Starting new generation for gen " .. pool.generation)
+	pool.generation = pool.generation + 1	
 	writeFile(forms.gettext(saveLoadFile) .. ".gen" .. pool.generation .. ".pool")
 end
 	
@@ -758,7 +756,7 @@ function onExit()
 end
 
 console.writeline ("Starting new temp.pool file.")
-writeFile(config.PoolDir.."temp.pool")
+writeFile(config.PoolDir.."temp.pool","temp.pool")
 
 event.onexit(onExit)
 
@@ -779,11 +777,9 @@ roomIDLabel = forms.label(form,"Level Index: " .. "", 375, 30 )
 CoinsLabel = forms.label(form, "Coins: " .. "", 5, 65)
 ScoreLabel = forms.label(form, "Score: " .. "", 130, 65, 90, 14)
 DmgLabel = forms.label(form, "Damage: " .. "", 230, 65, 110, 14)
-marioRightLabel = forms.label(form, "Right: " .. "", 400, 65, 90, 14)
 
 LivesLabel = forms.label(form, "Lives: " .. "", 130, 80, 90, 14)
 PowerUpLabel = forms.label(form, "PowerUp: " .. "", 230, 80, 110, 14)
-marioLeftLabel = forms.label(form, "Left: " .. "", 400, 80, 90, 14)
 
 startButton = forms.button(form, "Start", flipState, 155, 102)
 
@@ -812,187 +808,184 @@ createNewCSV(csvFileName .. ".csv", "Gen, species, genome, current fitness, max 
 Everything in this loop runs on every fram
 ]]
 
+--uncomment to print CSV-style stats on the output
+--handy if you just want to copy/paste it, or visualize the stats
 --console.writeline("Gen " .. pool.generation .. " species " .. pool.currentSpecies  .. " genome " .. pool.currentGenome .. " current fitness: " .. fitness .. " max fitness: " .. pool.maxFitness .. " Coin Bonus: " .. pool.coinBonus .. " Frame Count: " .. pool.currentFrame)
 --console.writeline("Gen, species, genome, current fitness, max fitness, Average Gen Fitness, Coin Bonus, Frame Count, Beat Game")
-while true do
-	
 
+win = 0
+beatGame = 0
+
+while true do
 
 	if config.Running == true then
 
-	--Current_Level_Index, game_mode, End_Level_Timer, CurrentRoomID = getLevelStats()
-	--console.writeline(Current_Level_Index .. " - " .. game_mode .. " - " .. End_Level_Timer .. " - " .. CurrentRoomID)
-	--21 - 20 - 0 - 14009863
+		forms.settext(roomIDLabel, "Level Index: " .. getCurrentRoom())
 
-
-	forms.settext(roomIDLabel, "Level Index: " .. getCurrentRoom())
-
-
-
-	local species = pool.species[pool.currentSpecies]
-	local genome = species.genomes[pool.currentGenome]
-	
-	displayGenome(genome)
-	
-	if pool.currentFrame%5 == 0 then
-		evaluateCurrent()
-	end
-
-	joypad.set(controller)
-
-	game.getPositions()
-	if marioX > rightmost then
-		rightmost = marioX
-		timeout = config.NeatConfig.TimeoutConstant
-	end
-	
-	local hitTimer = game.getMarioHitTimer()
-	
-	if checkMarioCollision == true then
-		if hitTimer > 0 then
-			marioHitCounter = marioHitCounter + 1
-			--console.writeline("Mario took damage, hit counter: " .. marioHitCounter)
-			checkMarioCollision = false
-		end
-	end
-	
-	if hitTimer == 0 then
-		checkMarioCollision = true
-	end
-	
-	powerUp = game.getPowerup()
-	if powerUp > 0 then
-		if powerUp ~= powerUpBefore then
-			powerUpCounter = powerUpCounter+1
-			powerUpBefore = powerUp
-		end
-	end
-	
-	Lives = game.getLives()
-
-	timeout = timeout - 1
-	
-	local timeoutBonus = pool.currentFrame / 4
-	if timeout + timeoutBonus <= 0 then
-	
-		local coins = game.getCoins() - startCoins
-		local score = game.getScore() - startScore
+		local species = pool.species[pool.currentSpecies]
+		local genome = species.genomes[pool.currentGenome]
 		
-		--console.writeline("Coins: " .. coins .. " score: " .. score)
-
-		--local coinScoreFitness = (coins * 50) + (score * 0.2)
-		coinWeight = config.NeatConfig.coinWeight
+		displayGenome(genome)
 		
-		local coinScoreFitness = (coins * coinWeight) + (score * 0.2)
-		if (coins + score) > 0 then
-			pool.coinBonus = coins + score 
-			--console.writeline("Coins and Score added " .. coinScoreFitness .. " fitness")
+		if pool.currentFrame%5 == 0 then
+			evaluateCurrent()
+		end
+
+		joypad.set(controller)
+
+		game.getPositions()
+		if marioX > rightmost then
+			rightmost = marioX
+			timeout = config.NeatConfig.TimeoutConstant
 		end
 		
-		local hitPenalty = marioHitCounter * 100
-		local powerUpBonus = powerUpCounter * 100
-
-		--local leftWeight = config.NeatConfig.leftWeight
-	
-
-		forms.settext(marioLeftLabel, "Left: " .. marioY)
-		forms.settext(marioRightLabel, "Right: " .. marioX)
-
-
-		--console.writeline("MarioX: " .. marioX .. " MarioY: " .. marioY .. " Rightmost: " .. rightmost)
-		if game_mode ~= SMW.game_mode_overworld then
-			fitness = coinScoreFitness - hitPenalty + powerUpBonus + rightmost - pool.currentFrame / 2
-			--local fitness = coinScoreFitness - hitPenalty + powerUpBonus + (rightmost + (marioY * leftWeight)) - pool.currentFrame / 2
-		else
-			fitness = (marioX) * 100 - pool.currentFrame / 2
-		end
-
-
-
-		if startLives < Lives then
-			local ExtraLiveBonus = (Lives - startLives)*1000
-			fitness = fitness + ExtraLiveBonus
-			console.writeline("ExtraLiveBonus added " .. ExtraLiveBonus)
-		end
-
-		beatGame = 0
-
-		if rightmost > 4816 then
-			beatGame = 1
-			fitness = fitness + 1000
-			console.writeline("!!!!!!Beat level!!!!!!!")
-		end
-		if fitness == 0 then
-			fitness = -1
-		end
-		genome.fitness = fitness
-
+		local hitTimer = game.getMarioHitTimer()
 		
-		if fitness > pool.maxFitness then
-			console.writeline("MarI/O's fitness evolved from " .. pool.maxFitness .. " to " .. fitness .. " Gen " .. pool.generation)
-			pool.maxFitness = fitness
-			console.writeline("Saving pool file version " .. pool.generation)
-			writeFile(forms.gettext(saveLoadFile) .. ".gen" .. pool.generation .. ".pool")
-			
-		end
-
-
-
-		local avgSum = 0
-		avgSum = totalAverageFitness()
-		pool.averageFitness = avgSum
-		--console.writeline("Pool average fitness = " .. avgSum)
-		forms.settext(averageFitnessLabel, "Average Fitness: " .. math.floor(avgSum))
-
-
-
-		--Also added a few more bits of information for better context
-		appendToCSV(csvFileName .. ".csv", pool.generation .. ", " .. pool.currentSpecies  .. ", " .. pool.currentGenome .. ", " .. fitness .. ", " .. pool.maxFitness .. ", " .. pool.averageFitness .. ", " .. pool.coinBonus .. ", " .. pool.currentFrame .. ", " .. beatGame .. "\n")
-		--gui.drawText(100,100,"Gen " .. pool.generation .. " genome " .. pool.currentGenome  .. " species " .. pool.currentSpecies .. " current fitness: " .. fitness .. " max fitness: " .. pool.maxFitness .. " Coin Bonus: " .. pool.coinBonus .. " Frame Count: " .. pool.currentFrame)
-
-		
-		pool.currentSpecies = 1
-		pool.currentGenome = 1
-		while fitnessAlreadyMeasured() do
-			nextGenome()
-		end
-
-		if beatGame == 0 then 
-			initializeRun() --only reload the state if we haven't beat the level
-		end
-	end
-
-	local measured = 0
-	local total = 0
-	for _,species in pairs(pool.species) do
-		for _,genome in pairs(species.genomes) do
-			total = total + 1
-			if genome.fitness ~= 0 then
-				measured = measured + 1
+		if checkMarioCollision == true then
+			if hitTimer > 0 then
+				marioHitCounter = marioHitCounter + 1
+				--console.writeline("Mario took damage, hit counter: " .. marioHitCounter)
+				checkMarioCollision = false
 			end
 		end
-	end
-	
+		
+		if hitTimer == 0 then
+			checkMarioCollision = true
+		end
+		
+		powerUp = game.getPowerup()
+		if powerUp > 0 then
+			if powerUp ~= powerUpBefore then
+				powerUpCounter = powerUpCounter+1
+				powerUpBefore = powerUp
+			end
+		end
+		
+		Lives = game.getLives()
 
-	Current_Level_Index, game_mode, End_Level_Timer, CurrentRoomID = getLevelStats()
+		timeout = timeout - 1
+		
+		local timeoutBonus = pool.currentFrame / 4
+		if timeout + timeoutBonus <= 0 then
+		
+			local coins = game.getCoins() - startCoins
+			local score = game.getScore() - startScore
+			
+			--console.writeline("Coins: " .. coins .. " score: " .. score)
+
+			coinWeight = config.NeatConfig.coinWeight
+			
+			local coinScoreFitness = (coins * coinWeight) + (score * 0.2)
+			if (coins + score) > 0 then
+				pool.coinBonus = coins + score 
+				--console.writeline("Coins and Score added " .. coinScoreFitness .. " fitness")
+			end
+			
+			local hitPenalty = marioHitCounter * 100
+			local powerUpBonus = powerUpCounter * 100
+
+		
+			--console.writeline("MarioX: " .. marioX .. " MarioY: " .. marioY .. " Rightmost: " .. rightmost)
+			if (game_mode ~= SMW.game_mode_overworld) then
+				fitness = coinScoreFitness - hitPenalty + powerUpBonus + rightmost - pool.currentFrame / 2
+				--local fitness = coinScoreFitness - hitPenalty + powerUpBonus + (rightmost + (marioY * UpWeight)) - pool.currentFrame / 2
+			elseif 	(Current_Level_Index == 42) then
+				--console.writeline("I'm using the regular fitness on level " .. Current_Level_Index)
+				fitness = coinScoreFitness - hitPenalty + powerUpBonus + rightmost - pool.currentFrame / 2
+			else
+				console.writeline("I'm using the overworld fitness!")
+				fitness = rightmost * 100 - pool.currentFrame / 2
+			end
 
 
-	--gui.drawEllipse(game.screenX-84, game.screenY-84, 192, 192, 0x50000000) 
-	forms.settext(FitnessLabel, "Fitness: " .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3))
-	forms.settext(GenerationLabel, "Generation: " .. pool.generation)
-	forms.settext(SpeciesLabel, "Species: " .. pool.currentSpecies)
-	forms.settext(GenomeLabel, "Genome: " .. pool.currentGenome)
-	forms.settext(MaxLabel, "Max: " .. math.floor(pool.maxFitness))
-	forms.settext(roomIDLabel, "Level Index: " .. Current_Level_Index)
-	forms.settext(MeasuredLabel, "Measured: " .. math.floor(measured/total*100) .. "%")
-	forms.settext(CoinsLabel, "Coins: " .. (game.getCoins() - startCoins))
-	forms.settext(ScoreLabel, "Score: " .. (game.getScore() - startScore))
-	forms.settext(LivesLabel, "Lives: " .. Lives)
-	forms.settext(DmgLabel, "Damage: " .. marioHitCounter)
-	forms.settext(PowerUpLabel, "PowerUp: " .. powerUpCounter)
-	
+			
+			if startLives < Lives then
+				local ExtraLiveBonus = (Lives - startLives)*1000
+				fitness = fitness + ExtraLiveBonus
+				console.writeline("ExtraLiveBonus added " .. ExtraLiveBonus)
+			end
+			
+			local maxWins = config.NeatConfig.maxWins
+			--console.writeline("Max wins: " .. maxWins .. " Current wins: " .. win)
 
-	pool.currentFrame = pool.currentFrame + 1
+			if rightmost > 4816 then
+				win = win +1
+				if win >= maxWins then
+					beatGame = 1
+				end
+				fitness = fitness + 1000
+				console.writeline("!!!!!!Beat level!!!!!!!")
+			end
+			if fitness == 0 then
+				fitness = -1
+			end
+			genome.fitness = fitness
+
+			
+			if fitness > pool.maxFitness then
+				console.writeline("MarI/O's fitness evolved from " .. pool.maxFitness .. " to " .. fitness .. " Gen " .. pool.generation)
+				pool.maxFitness = fitness
+				writeFile(forms.gettext(saveLoadFile) .. ".gen" .. pool.generation .. ".pool")
+				
+			end
+
+
+
+			local avgSum = 0
+			avgSum = totalAverageFitness()
+			pool.averageFitness = avgSum
+			--console.writeline("Pool average fitness = " .. avgSum)
+			forms.settext(averageFitnessLabel, "Average Fitness: " .. math.floor(avgSum))
+
+
+
+			--Also added a few more bits of information for better context
+			appendToCSV(csvFileName .. ".csv", pool.generation .. ", " .. pool.currentSpecies  .. ", " .. pool.currentGenome .. ", " .. fitness .. ", " .. pool.maxFitness .. ", " .. pool.averageFitness .. ", " .. pool.coinBonus .. ", " .. pool.currentFrame .. ", " .. beatGame .. "\n")
+			--gui.drawText(100,100,"Gen " .. pool.generation .. " genome " .. pool.currentGenome  .. " species " .. pool.currentSpecies .. " current fitness: " .. fitness .. " max fitness: " .. pool.maxFitness .. " Coin Bonus: " .. pool.coinBonus .. " Frame Count: " .. pool.currentFrame)
+
+			
+			pool.currentSpecies = 1
+			pool.currentGenome = 1
+			while fitnessAlreadyMeasured() do
+				nextGenome()
+			end
+
+			if beatGame == 0 then 
+				initializeRun() --only reload the state if we haven't beat the level
+			end
+		end
+
+		local measured = 0
+		local total = 0
+		for _,species in pairs(pool.species) do
+			for _,genome in pairs(species.genomes) do
+				total = total + 1
+				if genome.fitness ~= 0 then
+					measured = measured + 1
+				end
+			end
+		end
+		
+
+		Current_Level_Index, game_mode, End_Level_Timer, CurrentRoomID = getLevelStats()
+
+
+		--gui.drawEllipse(game.screenX-84, game.screenY-84, 192, 192, 0x50000000) 
+		forms.settext(FitnessLabel, "Fitness: " .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3))
+		forms.settext(GenerationLabel, "Generation: " .. pool.generation)
+		forms.settext(SpeciesLabel, "Species: " .. pool.currentSpecies)
+		forms.settext(GenomeLabel, "Genome: " .. pool.currentGenome)
+		forms.settext(MaxLabel, "Max: " .. math.floor(pool.maxFitness))
+		forms.settext(roomIDLabel, "Level Index: " .. Current_Level_Index)
+		forms.settext(MeasuredLabel, "Measured: " .. math.floor(measured/total*100) .. "%")
+		forms.settext(CoinsLabel, "Coins: " .. (game.getCoins() - startCoins))
+		forms.settext(ScoreLabel, "Score: " .. (game.getScore() - startScore))
+		forms.settext(LivesLabel, "Lives: " .. Lives)
+		forms.settext(DmgLabel, "Damage: " .. marioHitCounter)
+		forms.settext(PowerUpLabel, "PowerUp: " .. powerUpCounter)
+		
+
+		pool.currentFrame = pool.currentFrame + 1
 	
 	end
 	emu.frameadvance();

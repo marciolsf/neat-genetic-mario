@@ -177,24 +177,29 @@ end
 
 function savePool()
 local filename = forms.gettext(saveLoadFile)
-print(filename)
-writeFile(filename)
+console.writeline("Saving pool data to: " .. filename)
+writeFile(filename,"savePool()")
 end
 
 
 function loadFile(filename)
-	print("Loading pool from " .. filename)
+	local filename = forms.gettext(saveLoadFile)
+	console.writeline("Loading pool from " .. filename)
 	local file = io.open(filename, "r")
 	pool = newPool()
 	pool.generation = file:read("*number")
+		console.writeline("pool.generation: " .. pool.generation)
 	pool.maxFitness = file:read("*number")
+		console.writeline("pool.maxFitness: " .. pool.maxFitness)
 	forms.settext(MaxLabel, "Max Fitness: " .. math.floor(pool.maxFitness))
 	local numSpecies = file:read("*number")
 	for s=1,numSpecies do
 			local species = newSpecies()
 			table.insert(pool.species, species)
 			species.topFitness = file:read("*number")
+				console.writeline("species.topFitness: " .. species.topFitness)
 			species.staleness = file:read("*number")
+				console.writeline("species.staleness: " .. species.staleness)
 			local numGenomes = file:read("*number")
 			if numGenomes == nil then --fixed bug where the file fails to load and loads Nil into variable
 				numGenomes = 1
@@ -203,13 +208,15 @@ function loadFile(filename)
 					local genome = newGenome()
 					table.insert(species.genomes, genome)
 					genome.fitness = file:read("*number")
+						console.writeline("genome.fitness: " .. genome.fitness)
 					genome.maxneuron = file:read("*number")
+						console.writeline("genome.maxneuron: " .. genome.maxneuron)
 					local line = file:read("*line")
-					while line ~= "done" do
-
+					while line ~= "done" do							
 							genome.mutationRates[line] = file:read("*number")
 							line = file:read("*line")
 					end
+						console.writeline("Read all mutations")
 					local numGenes = file:read("*number")
 					for n=1,numGenes do
 
@@ -233,16 +240,20 @@ function loadFile(filename)
 							
 							table.insert(genome.genes, gene)
 					end
+					console.writeline("Read all genes")
 			end
 	end
+	console.writeline("closing the file...")
+
 	file:close()
-	
+	console.writeline("Pool loaded.")
+
 	while fitnessAlreadyMeasured() do
 			nextGenome()
 	end
+
 	initializeRun()
 	pool.currentFrame = pool.currentFrame + 1
-	print("Pool loaded.")
 end
 
 

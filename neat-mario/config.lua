@@ -16,9 +16,14 @@ _M.PoolDir = _M.BizhawkDir .. "Lua/SNES/neat-mario/pool/"
 _M.State = {
 	"YI1.state",				-- Yoshi's Island 1			
 	"Overworld.state",			
-				"Intro.state",
-				"DP1.state",				-- Donut Plains 1
-				"YI2.state",				-- Yoshi's Island 2
+
+	"DP2.state",
+	"DP1.state",				-- Donut Plains 1
+
+
+
+	"Intro.state",
+	"YI2.state",				-- Yoshi's Island 2
 }
 
 --[[
@@ -50,10 +55,10 @@ StepSize = 0.1,
 DisableMutationChance = 0.4,
 EnableMutationChance = 0.2,
 overworldTimeoutConstant = 50,
-TimeoutConstant = 20,
+TimeoutConstant = 50,
 MaxNodes = 1000000,
 coinWeight = 50,
-leftWeight = 1,
+maxWins = 20,
 }
 
 _M.ButtonNames = {
