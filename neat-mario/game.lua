@@ -107,8 +107,9 @@ function _M.getInputs()
 	local inputs = {}
 	local inputDeltaDistance = {}
 	
-	local layer1x = memory.read_s16_le(0x1A);
-	local layer1y = memory.read_s16_le(0x1C);
+	--these two are already called by getPositions(), and they're not used in here anyway
+	--local layer1x = memory.read_s16_le(0x1A);
+	--local layer1y = memory.read_s16_le(0x1C);
 	
 	
 	for dy=-config.BoxRadius*16,config.BoxRadius*16,16 do

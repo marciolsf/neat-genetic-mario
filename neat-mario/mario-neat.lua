@@ -5,9 +5,13 @@ spritelist = require "spritelist"
 game = require "game"
 mathFunctions = require "mathFunctions"
 board = require "board"
---genome = require "genome"
+--genome = require "genome" --too tangled up with board to work separately
 require("smw-bizhawk")
 
+
+--#################################
+--functions to get level info
+--#################################
 
 --Equally shamelessly borrowed from Dwood15 so I get level info
 -- as well as a few other very smart bits
@@ -23,6 +27,8 @@ local s24 = mainmemory.read_s24_le
 local WRAM = WRAM
 local SMW = SMW
 
+
+
 function getCurrentRoom()
 	return bit.lshift(u8(WRAM.room_index), 16) + bit.lshift(u8(WRAM.room_index + 1), 8) + u8(WRAM.room_index + 2)
 end
@@ -37,12 +43,18 @@ local Current_Level_Index, game_mode, End_Level_Timer, CurrentRoomID = getLevelS
 local give_fitBonus = false
 local levelType, currLevelScreenCount, hScreenCurrent, hScreenCurrCount, vScreenCurrent, vScreenCurrCount = read_screens()
 
+
 function getPlayerStats()
 	return s16(WRAM.x), s16(WRAM.y), u24(WRAM.mario_score), u8(WRAM.game_over_time_out_flag), u8(WRAM.exit_level_byte), u8(WRAM.mario_lives)
 end
 
 Inputs = config.InputSize+1
 Outputs = #config.ButtonNames
+
+
+--#################################
+--functions to output files
+--#################################
 
 function createNewCSV(csvFileName, datastring)
 	local file = io.open(csvFileName, 'w')
@@ -55,7 +67,6 @@ function createNewCSV(csvFileName, datastring)
 end
 
 
-
 function appendToCSV(filename, datastring)
 	local file = io.open(filename, 'a')
 	if file ~= nil then
@@ -65,6 +76,11 @@ function appendToCSV(filename, datastring)
 	console.writeline("Unable to open file: " .. csvFileName)
 	end
 end
+
+
+--#################################
+--All the genome stuff
+--#################################
 
 function newInnovation()
 	pool.innovation = pool.innovation + 1
@@ -339,7 +355,7 @@ end
 function linkMutate(genome, forceBias)
 	local neuron1 = randomNeuron(genome.genes, false)
 	local neuron2 = randomNeuron(genome.genes, true)
-	 
+
 	local newLink = newGene()
 	if neuron1 <= Inputs and neuron2 <= Inputs then
 		--Both input nodes
@@ -744,74 +760,37 @@ function fitnessAlreadyMeasured()
 end
 
 
-
 form = forms.newform(600, 570, "Mario-Neat")
 netPicture = forms.pictureBox(form, 5, 175, 575, 350)
-
-
 
 
 function onExit()
 	forms.destroy(form)
 end
 
-console.writeline ("Starting new temp.pool file.")
+--#################################
+--Build the form and start loading the game
+--#################################
+
+
+--still not sure this is being used for anything.
 writeFile(config.PoolDir.."temp.pool","temp.pool")
 
 event.onexit(onExit)
 
 --[[Initialize form]]
-
-
-GenerationLabel = forms.label(form, "Generation: " .. pool.generation, 5, 5)
-SpeciesLabel = forms.label(form, "Species: " .. pool.currentSpecies, 130, 5)
-GenomeLabel = forms.label(form, "Genome: " .. pool.currentGenome, 230, 5)
-MeasuredLabel = forms.label(form, "Measured: " .. "", 330, 5)
-
-FitnessLabel = forms.label(form, "Fitness: " .. "", 5, 30)
-MaxLabel = forms.label(form, "Max: " .. "", 130, 30)
-averageFitnessLabel = forms.label(form, "Average Fitness: " .. "", 230, 30)
-
-roomIDLabel = forms.label(form,"Level Index: " .. "", 375, 30 )
-
-CoinsLabel = forms.label(form, "Coins: " .. "", 5, 65)
-ScoreLabel = forms.label(form, "Score: " .. "", 130, 65, 90, 14)
-DmgLabel = forms.label(form, "Damage: " .. "", 230, 65, 110, 14)
-
-LivesLabel = forms.label(form, "Lives: " .. "", 130, 80, 90, 14)
-PowerUpLabel = forms.label(form, "PowerUp: " .. "", 230, 80, 110, 14)
-
-startButton = forms.button(form, "Start", flipState, 155, 102)
-
-restartButton = forms.button(form, "Restart", initializePool, 155, 102)
-saveButton = forms.button(form, "Save", savePool, 5, 102)
-loadButton = forms.button(form, "Load", loadPool, 80, 102)
-playTopButton = forms.button(form, "Play Top", playTop, 230, 102)
-
-saveLoadFile = forms.textbox(form, config.NeatConfig.Filename .. ".pool", 575, 25, nil, 5, 148)
-saveLoadLabel = forms.label(form, "Save/Load:", 7, 129)
-spritelist.InitSpriteList()
-spritelist.InitExtSpriteList()
-
-
-
+drawForm(form)
 
 
 local csvFileName = "Exports\\RunStats_" .. os.date("%d%m%Y_%I%M%S")
-
 createNewCSV(csvFileName .. ".csv", "Gen, species, genome, current fitness, max fitness,"
 .. "Average Gen Fitness, Coin Bonus, Frame Count, Beat Game\n");
 
+--#################################
+--main game loop
+--#################################
 
-
---[[Main game loop
-Everything in this loop runs on every fram
-]]
-
---uncomment to print CSV-style stats on the output
---handy if you just want to copy/paste it, or visualize the stats
---console.writeline("Gen " .. pool.generation .. " species " .. pool.currentSpecies  .. " genome " .. pool.currentGenome .. " current fitness: " .. fitness .. " max fitness: " .. pool.maxFitness .. " Coin Bonus: " .. pool.coinBonus .. " Frame Count: " .. pool.currentFrame)
---console.writeline("Gen, species, genome, current fitness, max fitness, Average Gen Fitness, Coin Bonus, Frame Count, Beat Game")
+local maxWins = config.NeatConfig.maxWins
 
 win = 0
 beatGame = 0
@@ -820,24 +799,45 @@ while true do
 
 	if config.Running == true then
 
-		forms.settext(roomIDLabel, "Level Index: " .. getCurrentRoom())
 
 		local species = pool.species[pool.currentSpecies]
 		local genome = species.genomes[pool.currentGenome]
 		
 		displayGenome(genome)
+
+		Current_Level_Index, game_mode, End_Level_Timer, CurrentRoomID = getLevelStats()
+		forms.settext(roomIDLabel, "Level Index: " .. Current_Level_Index)
 		
-		if pool.currentFrame%5 == 0 then
+		if pool.currentFrame%5 == 0 then			
 			evaluateCurrent()
 		end
 
+
 		joypad.set(controller)
 
+		--playing with various ways to extend the timeout, to account for level transitions
 		game.getPositions()
 		if marioX > rightmost then
 			rightmost = marioX
-			timeout = config.NeatConfig.TimeoutConstant
+			--if Current_Level_Index == 0 then
+			--	timeout = config.NeatConfig.overworldTimeoutConstant --override the constant to avoid timeouts due to screen-loading
+			--else
+				timeout = config.NeatConfig.TimeoutConstant
+			--end
 		end
+
+--[[
+		game.getPositions()
+		if marioX > rightmost then
+			rightmost = marioX
+			if win < maxWins then
+				timeout = config.NeatConfig.TimeoutConstant
+			else
+				timeout = config.NeatConfig.overworldTimeoutConstant --override the constant to avoid timeouts due to screen-loading
+			end
+		end
+]]
+
 		
 		local hitTimer = game.getMarioHitTimer()
 		
@@ -863,11 +863,29 @@ while true do
 		
 		Lives = game.getLives()
 
+		--[[if (game_mode ~= SMW.game_mode_overworld) then
+			timeout = timeout - 1
+		else
+			--timeout = timeout  +1000
+			--console.writeline(pool.Currentframe)
+			joypad.set(controller)
+
+
+		end]]
+		
 		timeout = timeout - 1
 		
 		local timeoutBonus = pool.currentFrame / 4
+
+		--console.writeline("timeout is: " .. timeout)
+
+		--##################################
+		--The timer ran out
+		--Start all the fitness calculations,
+		-- then reload the savestate
+		--##################################
 		if timeout + timeoutBonus <= 0 then
-		
+
 			local coins = game.getCoins() - startCoins
 			local score = game.getScore() - startScore
 			
@@ -889,12 +907,11 @@ while true do
 			if (game_mode ~= SMW.game_mode_overworld) then
 				fitness = coinScoreFitness - hitPenalty + powerUpBonus + rightmost - pool.currentFrame / 2
 				--local fitness = coinScoreFitness - hitPenalty + powerUpBonus + (rightmost + (marioY * UpWeight)) - pool.currentFrame / 2
-			elseif 	(Current_Level_Index == 42) then
+			--elseif 	(Current_Level_Index == 42) then
 				--console.writeline("I'm using the regular fitness on level " .. Current_Level_Index)
-				fitness = coinScoreFitness - hitPenalty + powerUpBonus + rightmost - pool.currentFrame / 2
+			--	fitness = coinScoreFitness - hitPenalty + powerUpBonus + rightmost - pool.currentFrame / 2
 			else
-				console.writeline("I'm using the overworld fitness!")
-				fitness = rightmost * 100 - pool.currentFrame / 2
+				fitness = rightmost * 100-- - pool.currentFrame * 2
 			end
 
 
@@ -905,8 +922,6 @@ while true do
 				console.writeline("ExtraLiveBonus added " .. ExtraLiveBonus)
 			end
 			
-			local maxWins = config.NeatConfig.maxWins
-			--console.writeline("Max wins: " .. maxWins .. " Current wins: " .. win)
 
 			if rightmost > 4816 then
 				win = win +1
@@ -937,9 +952,6 @@ while true do
 			--console.writeline("Pool average fitness = " .. avgSum)
 			forms.settext(averageFitnessLabel, "Average Fitness: " .. math.floor(avgSum))
 
-
-
-			--Also added a few more bits of information for better context
 			appendToCSV(csvFileName .. ".csv", pool.generation .. ", " .. pool.currentSpecies  .. ", " .. pool.currentGenome .. ", " .. fitness .. ", " .. pool.maxFitness .. ", " .. pool.averageFitness .. ", " .. pool.coinBonus .. ", " .. pool.currentFrame .. ", " .. beatGame .. "\n")
 			--gui.drawText(100,100,"Gen " .. pool.generation .. " genome " .. pool.currentGenome  .. " species " .. pool.currentSpecies .. " current fitness: " .. fitness .. " max fitness: " .. pool.maxFitness .. " Coin Bonus: " .. pool.coinBonus .. " Frame Count: " .. pool.currentFrame)
 
@@ -950,10 +962,13 @@ while true do
 				nextGenome()
 			end
 
-			if beatGame == 0 then 
+			if beatGame == 0 then
 				initializeRun() --only reload the state if we haven't beat the level
 			end
+
 		end
+
+		--all the fitness calculations are done, update the form valumes and advance to the next frame
 
 		local measured = 0
 		local total = 0
@@ -966,9 +981,6 @@ while true do
 			end
 		end
 		
-
-		Current_Level_Index, game_mode, End_Level_Timer, CurrentRoomID = getLevelStats()
-
 
 		--gui.drawEllipse(game.screenX-84, game.screenY-84, 192, 192, 0x50000000) 
 		forms.settext(FitnessLabel, "Fitness: " .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3))
