@@ -2,12 +2,13 @@
 
 I've always wanted to learn more about ML, and this sounded like a good starting step. After spending some quality time with this project, my goals are:
 
-* [X] tweak the forms UI a bit so information is easier to see - done!
-* [X] implement ways to export the data so we can track progress - done!
+* [X] tweak the forms UI a bit so information is easier to see 
+* [X] implement ways to export the data so we can track progress 
 * [ ] export completed runs as movie files -- will implement in future update
 * [ ] get the save/load functionality working - still trying to figure this one out
-* [X] enable overworld navigation and auto-selecting new levels -- done!
+* [X] enable overworld navigation and auto-selecting new levels 
 * [ ] enable checkpointing when starting a new level,  would really speed up learning
+* [X] auto-close message boxes. Really helps with overworld save prompts, and others that don't auto-close 
 
 
 
