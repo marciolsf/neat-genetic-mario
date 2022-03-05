@@ -1,4 +1,5 @@
 config = require "config"
+--require "genome"
 
 function displayGenome(genome)
 	forms.clear(netPicture,0x80808080)
@@ -300,11 +301,15 @@ function initializeRun()
 	checkMarioCollision = true
 	marioHitCounter = 0
 	powerUpCounter = 0
+	died = 0
 	powerUpBefore = game.getPowerup()
 	local species = pool.species[pool.currentSpecies]
 	local genome = species.genomes[pool.currentGenome]
 	generateNetwork(genome)
 	evaluateCurrent()
+	PreviousRoomID = 0
+	OWSwitch = 0
+
 end
 
 function mysplit(inputstr, sep)
@@ -327,4 +332,38 @@ function flipState()
 		config.Running = true
 		forms.settext(startButton, "Stop")
 	end
+end
+
+function drawForm(form)
+	GenerationLabel = forms.label(form, "Generation: " .. pool.generation, 5, 5)
+	SpeciesLabel = forms.label(form, "Species: " .. pool.currentSpecies, 130, 5)
+	GenomeLabel = forms.label(form, "Genome: " .. pool.currentGenome, 230, 5)
+	MeasuredLabel = forms.label(form, "Measured: " .. "", 375, 5)
+	
+	FitnessLabel = forms.label(form, "Fitness: " .. "", 5, 30)
+	MaxLabel = forms.label(form, "Max: " .. "", 130, 30)
+	averageFitnessLabel = forms.label(form, "Average Fitness: " .. "", 230, 30)
+	roomIDLabel = forms.label(form,"Room ID: " .. "", 375, 30,110,14 )
+	
+	CoinsLabel = forms.label(form, "Coins: " .. "", 5, 65, 90, 14)
+	ScoreLabel = forms.label(form, "Score: " .. "", 130, 65, 90, 14)
+	DmgLabel = forms.label(form, "Damage: " .. "", 230, 65, 110, 14)
+	timeoutLabel = forms.label(form, "Timeout: " .. "", 375, 65, 110,14)
+	
+	RightMostLabel = forms.label(form, "Rightmost: " .. "", 5, 80)
+	LivesLabel = forms.label(form, "Lives: " .. "", 130, 80, 90, 14)
+	PowerUpLabel = forms.label(form, "PowerUp: " .. "", 230, 80, 110, 14)
+	algoFitnessLabel = forms.label(form, "Algo Fitness: " .. "", 375, 80, 110, 14)
+	
+	startButton = forms.button(form, "Start", flipState, 155, 102)
+	
+	restartButton = forms.button(form, "Restart", initializePool, 155, 102)
+	saveButton = forms.button(form, "Save", savePool, 5, 102)
+	loadButton = forms.button(form, "Load", loadPool, 80, 102)
+	playTopButton = forms.button(form, "Play Top", playTop, 230, 102)
+	
+	saveLoadFile = forms.textbox(form, config.NeatConfig.Filename .. ".pool", 575, 25, nil, 5, 148)
+	saveLoadLabel = forms.label(form, "Save/Load:", 7, 129)
+	spritelist.InitSpriteList()
+	spritelist.InitExtSpriteList()
 end

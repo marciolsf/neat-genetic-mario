@@ -3,16 +3,102 @@ config = require "config"
 spritelist = require "spritelist"
 local _M = {}
 
+
+--#################################
+--functions to get level info
+--#################################
+
+--Equally shamelessly borrowed from Dwood15 so I get level info
+-- as well as a few other very smart bits
+local mainmemory = mainmemory
+
+-- Compatibility
+local u8  = mainmemory.read_u8
+local s8  = mainmemory.read_s8
+local u16 = mainmemory.read_u16_le
+local s16 = mainmemory.read_s16_le
+local u24 = mainmemory.read_u24_le
+local s24 = mainmemory.read_s24_le
+local WRAM = {
+    -- General
+    game_mode = 0x0100,
+    room_index = 0x00ce,
+    level_index = 0x13bf,
+    game_mode = 0x0100,
+    end_level_timer = 0x1493,
+    OW_x = 0x1f17,
+    OW_y = 0x1f19,
+    message_box_timer = 0x1b89
+}
+
+local SMW = {
+    -- Game Modes
+    game_mode_overworld = 0x0e,
+    game_mode_fade_to_level = 0x0f,
+    game_mode_level = 0x14
+
+}
+
+
+function _M.getMessageTimer()
+	return math.floor(u8(WRAM.message_box_timer)/4)
+end
+
+function _M.getCurrentRoom()
+	return bit.lshift(u8(WRAM.room_index), 16) + bit.lshift(u8(WRAM.room_index + 1), 8) + u8(WRAM.room_index + 2)
+end
+
+function _M.getLevelStats()
+	return u8(WRAM.level_index), u8(WRAM.game_mode), u8(WRAM.end_level_timer), _M.getCurrentRoom()
+end 
+
+
+function _M.getOWPosition()
+    local offset = 0
+    if Current_character == "Luigi" then offset = 4 end
+    
+    local OW_x = s16(WRAM.OW_x + offset)
+    local OW_y = s16(WRAM.OW_y + offset)
+
+    return OW_x, OW_y
+end
+
 function _M.getPositions()
-	marioX = memory.read_s16_le(0x94)
-	marioY = memory.read_s16_le(0x96)
+
+    local OW_x, OW_y
+
+	previous_OW_x = OW_x
+	previous_OW_y = OW_y
+
+	previous_marioX = marioX
+	previous_marioY = marioY
+	
+	OW_x, OW_y = _M.getOWPosition()
+    local Current_Level_Index, game_mode, End_Level_Timer, CurrentRoomID = _M.getLevelStats()
+	
+	if CurrentRoomID == 0 then
+        marioX = OW_x
+        marioY = marioY
+    else
+		marioX = memory.read_s16_le(0x94)
+		marioY = memory.read_s16_le(0x96)
+	end
 		
 	local layer1x = memory.read_s16_le(0x1A);
 	local layer1y = memory.read_s16_le(0x1C);
-		
+
+	if marioY == nil then 
+		marioY = 0 
+	end
+
 	_M.screenX = marioX-layer1x
 	_M.screenY = marioY-layer1y
 end
+
+function _M.getPlayerStats()
+	return s16(WRAM.x), s16(WRAM.y), u24(WRAM.mario_score), u8(WRAM.game_over_time_out_flag), u8(WRAM.exit_level_byte), u8(WRAM.mario_lives)
+end
+
 
 function _M.getCoins()
 	local coins = memory.readbyte(0x0DBF)
@@ -166,8 +252,40 @@ function _M.clearJoypad()
 	controller = {}
 	for b = 1,#config.ButtonNames do
 		controller["P1 " .. config.ButtonNames[b]] = false
+		--console.writeline("Set " .. config.ButtonNames[b] .. " to false")
 	end
 	joypad.set(controller)
 end
 
+function _M.moveOveworld()
+	controller["Left"] = false
+	controller["Up"] = false
+	controller["Down"] = false
+	controller["Right"] = false
+	controller["Down"] = false
+
+
+	for i=1,20 do
+
+
+		joypad.set(controller,1)
+		
+		controller["Left"] = true
+		controller["A"] = true
+		joypad.set(controller,1)
+
+		console.writeline(buttons)
+
+		buttons = joypad.get(1)
+
+
+
+	end
+--	joypad.set(controller)
+
+
+end
+
+
 return _M
+

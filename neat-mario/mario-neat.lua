@@ -9,44 +9,13 @@ board = require "board"
 require("smw-bizhawk")
 
 
---#################################
---functions to get level info
---#################################
-
---Equally shamelessly borrowed from Dwood15 so I get level info
--- as well as a few other very smart bits
-local mainmemory = mainmemory
-
--- Compatibility
-local u8  = mainmemory.read_u8
-local s8  = mainmemory.read_s8
-local u16 = mainmemory.read_u16_le
-local s16 = mainmemory.read_s16_le
-local u24 = mainmemory.read_u24_le
-local s24 = mainmemory.read_s24_le
-local WRAM = WRAM
-local SMW = SMW
-
-
-
-function getCurrentRoom()
-	return bit.lshift(u8(WRAM.room_index), 16) + bit.lshift(u8(WRAM.room_index + 1), 8) + u8(WRAM.room_index + 2)
-end
-
-local function getLevelStats()
-	return u8(WRAM.level_index), u8(WRAM.game_mode), u8(WRAM.end_level_timer), getCurrentRoom()
-end 
-
-local Current_Level_Index, game_mode, End_Level_Timer, CurrentRoomID = getLevelStats()
+local Current_Level_Index, game_mode, End_Level_Timer, CurrentRoomID = game.getLevelStats()
 
 --read_screens is in smw-bizhawk
 local give_fitBonus = false
 local levelType, currLevelScreenCount, hScreenCurrent, hScreenCurrCount, vScreenCurrent, vScreenCurrCount = read_screens()
 
 
-function getPlayerStats()
-	return s16(WRAM.x), s16(WRAM.y), u24(WRAM.mario_score), u8(WRAM.game_over_time_out_flag), u8(WRAM.exit_level_byte), u8(WRAM.mario_lives)
-end
 
 Inputs = config.InputSize+1
 Outputs = #config.ButtonNames
@@ -794,6 +763,8 @@ local maxWins = config.NeatConfig.maxWins
 
 win = 0
 beatGame = 0
+OWSwitch = 0
+local message_box_timer = 0
 
 while true do
 
@@ -805,40 +776,75 @@ while true do
 		
 		displayGenome(genome)
 
-		Current_Level_Index, game_mode, End_Level_Timer, CurrentRoomID = getLevelStats()
-		forms.settext(roomIDLabel, "Level Index: " .. Current_Level_Index)
-		
-		if pool.currentFrame%5 == 0 then			
-			evaluateCurrent()
-		end
+		PreviousRoomID = CurrentRoomID
+		Current_Level_Index, game_mode, End_Level_Timer, CurrentRoomID = game.getLevelStats()
+		forms.settext(roomIDLabel, "Room ID: " .. CurrentRoomID)
 
 
-		joypad.set(controller)
-
-		--playing with various ways to extend the timeout, to account for level transitions
-		game.getPositions()
-		if marioX > rightmost then
-			rightmost = marioX
-			--if Current_Level_Index == 0 then
-			--	timeout = config.NeatConfig.overworldTimeoutConstant --override the constant to avoid timeouts due to screen-loading
-			--else
-				timeout = config.NeatConfig.TimeoutConstant
-			--end
-		end
-
---[[
-		game.getPositions()
-		if marioX > rightmost then
-			rightmost = marioX
-			if win < maxWins then
-				timeout = config.NeatConfig.TimeoutConstant
-			else
-				timeout = config.NeatConfig.overworldTimeoutConstant --override the constant to avoid timeouts due to screen-loading
+		if CurrentRoomID ~= 0 then --if on a regular level, do the thing
+			if pool.currentFrame%5 == 0 then			
+				evaluateCurrent()
 			end
+			joypad.set(controller)
+		
+		elseif CurrentRoomID ~= 0 and CurrentRoomID ~= PreviousRoomID  then --and OWSwitch == 0 then --timeout adjustment for sub-level transitions
+				timeout = timeout + 210	
+				rightmost = 0
+				OWSwitch = 1
+				console.writeline("sublevel timeout bonus added")
+
+			--end
+		elseif CurrentRoomID ~= 0 and PreviousRoomID == 0 then --transitioned from the overworld
+			timeout = timeout + 210
+			console.writeline("Start level timeout bonus")
+			
+		elseif CurrentRoomID == 0 and OWSwitch == 0 and (math.mod(timeout,80) == 0) then --if on overworld, and it's been 80 frames
+			local input = {Right = true, A=true} --start pushing A to enter the level
+			joypad.set(input, 1)
+			timeout = config.NeatConfig.TimeoutConstant --same timeout logic used in-level counter
+			
+
+		elseif CurrentRoomID == 0 and OWSwitch == 0 and (math.mod(timeout,60) == 0) then --if on overworld, and it's been 60 frames, then move around
+			timeout = timeout + 180	--we need more navigation time
+			local input = {Right = true, Up = False, Left = false, Down = false, A=false} 
+			joypad.set(input, 1)
+		elseif CurrentRoomID == 0 and OWSwitch == 0 and (math.mod(timeout,50) == 0) then 
+			local input = {Right = false, Up = true, Left = false, Down = false, A=false} 
+			joypad.set(input, 1)
+		elseif CurrentRoomID == 0 and OWSwitch == 0 and (math.mod(timeout,40) == 0) then 
+			local input = {Right = false, Up = False, Left = true, Down = false, A=false} 
+			joypad.set(input, 1)
+		elseif CurrentRoomID == 0 and OWSwitch == 0 and (math.mod(timeout,30) == 0) then 
+			local input = {Right = false, Up = False, Left = false, Down = true, A=false} 
+			joypad.set(input, 1)
 		end
-]]
+
+
+		if CurrentRoomID ~= 0 and PreviousRoomID == 0 then
+			OWSwitch = 1 --entered a level, disable overworld navigation
+			timeout = timeout + 180 -- need an additional timeout extension so the new level can load. Once mario starts moving, it'll reset back to the constant
+		end
+
+		game.getPositions()
+		
+		if marioX > rightmost then
+			rightmost = marioX
+			timeout = config.NeatConfig.TimeoutConstant --we need this here to keep the timeout "static" as long as mario is moving right
+		end
 
 		
+		message_box_timer = game.getMessageTimer()
+		if message_box_timer >0 and (math.mod(timeout,50)==0) then --we need a special handler to close out dialogues
+			--stuckTimer = stuckTimer -1
+			--if stuckTimer <=10 then
+			local input = {Right = false, Up = False, Left = false, Down = false, Y=false, B=false, X=false, A=true} --keep moving to the right
+			joypad.set(input, 1)
+				--timeout = config.NeatConfig.TimeoutConstant
+			--end
+			
+		end
+
+
 		local hitTimer = game.getMarioHitTimer()
 		
 		if checkMarioCollision == true then
@@ -863,19 +869,10 @@ while true do
 		
 		Lives = game.getLives()
 
-		--[[if (game_mode ~= SMW.game_mode_overworld) then
-			timeout = timeout - 1
-		else
-			--timeout = timeout  +1000
-			--console.writeline(pool.Currentframe)
-			joypad.set(controller)
-
-
-		end]]
-		
-		timeout = timeout - 1
-		
-		local timeoutBonus = pool.currentFrame / 4
+		--if CurrentRoomID ~= 0 then
+			timeout = timeout - 1		
+		--end
+		timeoutBonus = pool.currentFrame / 4
 
 		--console.writeline("timeout is: " .. timeout)
 
@@ -903,31 +900,22 @@ while true do
 			local powerUpBonus = powerUpCounter * 100
 
 		
-			--console.writeline("MarioX: " .. marioX .. " MarioY: " .. marioY .. " Rightmost: " .. rightmost)
-			if (game_mode ~= SMW.game_mode_overworld) then
-				fitness = coinScoreFitness - hitPenalty + powerUpBonus + rightmost - pool.currentFrame / 2
-				--local fitness = coinScoreFitness - hitPenalty + powerUpBonus + (rightmost + (marioY * UpWeight)) - pool.currentFrame / 2
-			--elseif 	(Current_Level_Index == 42) then
-				--console.writeline("I'm using the regular fitness on level " .. Current_Level_Index)
-			--	fitness = coinScoreFitness - hitPenalty + powerUpBonus + rightmost - pool.currentFrame / 2
-			else
-				fitness = rightmost * 100-- - pool.currentFrame * 2
-			end
+			fitness = coinScoreFitness - hitPenalty + powerUpBonus + rightmost - pool.currentFrame / 2
 
 
-			
+			--[[
 			if startLives < Lives then
 				local ExtraLiveBonus = (Lives - startLives)*1000
 				fitness = fitness + ExtraLiveBonus
-				console.writeline("ExtraLiveBonus added " .. ExtraLiveBonus)
+				--console.writeline("ExtraLiveBonus added " .. ExtraLiveBonus)
 			end
-			
+			]]
 
 			if rightmost > 4816 then
-				win = win +1
-				if win >= maxWins then
-					beatGame = 1
-				end
+				--win = win +1
+				--if win >= maxWins then
+				beatGame = 1
+				--end
 				fitness = fitness + 1000
 				console.writeline("!!!!!!Beat level!!!!!!!")
 			end
@@ -944,14 +932,6 @@ while true do
 				
 			end
 
-
-
-			local avgSum = 0
-			avgSum = totalAverageFitness()
-			pool.averageFitness = avgSum
-			--console.writeline("Pool average fitness = " .. avgSum)
-			forms.settext(averageFitnessLabel, "Average Fitness: " .. math.floor(avgSum))
-
 			appendToCSV(csvFileName .. ".csv", pool.generation .. ", " .. pool.currentSpecies  .. ", " .. pool.currentGenome .. ", " .. fitness .. ", " .. pool.maxFitness .. ", " .. pool.averageFitness .. ", " .. pool.coinBonus .. ", " .. pool.currentFrame .. ", " .. beatGame .. "\n")
 			--gui.drawText(100,100,"Gen " .. pool.generation .. " genome " .. pool.currentGenome  .. " species " .. pool.currentSpecies .. " current fitness: " .. fitness .. " max fitness: " .. pool.maxFitness .. " Coin Bonus: " .. pool.coinBonus .. " Frame Count: " .. pool.currentFrame)
 
@@ -962,9 +942,9 @@ while true do
 				nextGenome()
 			end
 
-			if beatGame == 0 then
+			--if beatGame == 0 then
 				initializeRun() --only reload the state if we haven't beat the level
-			end
+			--end
 
 		end
 
@@ -983,19 +963,24 @@ while true do
 		
 
 		--gui.drawEllipse(game.screenX-84, game.screenY-84, 192, 192, 0x50000000) 
-		forms.settext(FitnessLabel, "Fitness: " .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3))
 		forms.settext(GenerationLabel, "Generation: " .. pool.generation)
 		forms.settext(SpeciesLabel, "Species: " .. pool.currentSpecies)
 		forms.settext(GenomeLabel, "Genome: " .. pool.currentGenome)
-		forms.settext(MaxLabel, "Max: " .. math.floor(pool.maxFitness))
-		forms.settext(roomIDLabel, "Level Index: " .. Current_Level_Index)
 		forms.settext(MeasuredLabel, "Measured: " .. math.floor(measured/total*100) .. "%")
+
+		forms.settext(FitnessLabel, "Fitness: " .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3))				
+		forms.settext(MaxLabel, "Max: " .. math.floor(pool.maxFitness))
+		forms.settext(roomIDLabel, "Room ID: " .. CurrentRoomID)
+		
 		forms.settext(CoinsLabel, "Coins: " .. (game.getCoins() - startCoins))
 		forms.settext(ScoreLabel, "Score: " .. (game.getScore() - startScore))
-		forms.settext(LivesLabel, "Lives: " .. Lives)
 		forms.settext(DmgLabel, "Damage: " .. marioHitCounter)
+		forms.settext(timeoutLabel, "Timeout: " .. timeout)
+
+		forms.settext(RightMostLabel, "Rightmost: " .. rightmost)
+		forms.settext(LivesLabel, "Lives: " .. Lives)
 		forms.settext(PowerUpLabel, "PowerUp: " .. powerUpCounter)
-		
+		--forms.settext(algoFitnessLabel, "Algo Fitness: " .. fitness)
 
 		pool.currentFrame = pool.currentFrame + 1
 	
