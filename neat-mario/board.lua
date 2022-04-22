@@ -202,9 +202,9 @@ function loadFile(filename)
 			species.staleness = file:read("*number")
 				console.writeline("species.staleness: " .. species.staleness)
 			local numGenomes = file:read("*number")
-			if numGenomes == nil then --fixed bug where the file fails to load and loads Nil into variable
-				numGenomes = 1
-			end
+			--if numGenomes == nil then --fixed bug where the file fails to load and loads Nil into variable
+			--	numGenomes = 1
+			--end
 			for g=1,numGenomes do
 					local genome = newGenome()
 					table.insert(species.genomes, genome)
@@ -292,6 +292,7 @@ function initializeRun()
 		game.writePowerup(config.StartPowerup)
 	end
 	rightmost = 0
+	topMost = 400
 	pool.currentFrame = 0
 	timeout = config.NeatConfig.TimeoutConstant
 	game.clearJoypad()
@@ -307,9 +308,6 @@ function initializeRun()
 	local genome = species.genomes[pool.currentGenome]
 	generateNetwork(genome)
 	evaluateCurrent()
-	PreviousRoomID = 0
-	OWSwitch = 0
-
 end
 
 function mysplit(inputstr, sep)
@@ -342,28 +340,29 @@ function drawForm(form)
 	
 	FitnessLabel = forms.label(form, "Fitness: " .. "", 5, 30)
 	MaxLabel = forms.label(form, "Max: " .. "", 130, 30)
-	averageFitnessLabel = forms.label(form, "Average Fitness: " .. "", 230, 30)
+	averageFitnessLabel = forms.label(form, "Avg Fitness: " .. "", 230, 30, 90, 14)
 	roomIDLabel = forms.label(form,"Room ID: " .. "", 375, 30,110,14 )
 	
 	CoinsLabel = forms.label(form, "Coins: " .. "", 5, 65, 90, 14)
 	ScoreLabel = forms.label(form, "Score: " .. "", 130, 65, 90, 14)
 	DmgLabel = forms.label(form, "Damage: " .. "", 230, 65, 110, 14)
-	timeoutLabel = forms.label(form, "Timeout: " .. "", 375, 65, 110,14)
+	timeoutLabel = forms.label(form, "Timeout: " .. "", 375, 65, 300, 14)
 	
 	RightMostLabel = forms.label(form, "Rightmost: " .. "", 5, 80)
 	LivesLabel = forms.label(form, "Lives: " .. "", 130, 80, 90, 14)
 	PowerUpLabel = forms.label(form, "PowerUp: " .. "", 230, 80, 110, 14)
-	algoFitnessLabel = forms.label(form, "Algo Fitness: " .. "", 375, 80, 110, 14)
+	OWSwitchLabel = forms.label(form, "OWSwitch: " .. "", 375, 80, 110, 14)
 	
-	startButton = forms.button(form, "Start", flipState, 155, 102)
 	
-	restartButton = forms.button(form, "Restart", initializePool, 155, 102)
+	
 	saveButton = forms.button(form, "Save", savePool, 5, 102)
 	loadButton = forms.button(form, "Load", loadPool, 80, 102)
-	playTopButton = forms.button(form, "Play Top", playTop, 230, 102)
+	startButton = forms.button(form, "Start", flipState, 155, 102)
+	restartButton = forms.button(form, "Restart", initializePool, 230, 102)
+	playTopButton = forms.button(form, "Play Top", playTop, 300, 102)
+	showNetwork = forms.checkbox(form, "Show Map", 400, 102)
+
 	
 	saveLoadFile = forms.textbox(form, config.NeatConfig.Filename .. ".pool", 575, 25, nil, 5, 148)
 	saveLoadLabel = forms.label(form, "Save/Load:", 7, 129)
-	spritelist.InitSpriteList()
-	spritelist.InitExtSpriteList()
 end

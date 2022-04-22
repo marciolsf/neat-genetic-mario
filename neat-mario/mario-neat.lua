@@ -730,7 +730,7 @@ end
 
 
 form = forms.newform(600, 570, "Mario-Neat")
-netPicture = forms.pictureBox(form, 5, 175, 575, 350)
+netPicture = forms.pictureBox(form, 5, 175, 600, 350)
 
 
 function onExit()
@@ -749,6 +749,8 @@ event.onexit(onExit)
 
 --[[Initialize form]]
 drawForm(form)
+spritelist.InitSpriteList()
+spritelist.InitExtSpriteList()
 
 
 local csvFileName = "Exports\\RunStats_" .. os.date("%d%m%Y_%I%M%S")
@@ -763,67 +765,56 @@ local maxWins = config.NeatConfig.maxWins
 
 win = 0
 beatGame = 0
-OWSwitch = 0
+OWSwitch = -1 --just need a value, it'll be set correctly below based on level type 
 local message_box_timer = 0
+local Lives = game.getLives()
+
+topMost = marioY
 
 while true do
 
 	if config.Running == true then
 
 
+
 		local species = pool.species[pool.currentSpecies]
 		local genome = species.genomes[pool.currentGenome]
 		
-		displayGenome(genome)
+		if forms.ischecked(showNetwork) then
+			displayGenome(genome)
+		end
 
 		PreviousRoomID = CurrentRoomID
 		Current_Level_Index, game_mode, End_Level_Timer, CurrentRoomID = game.getLevelStats()
 		forms.settext(roomIDLabel, "Room ID: " .. CurrentRoomID)
 
 
-		if CurrentRoomID ~= 0 then --if on a regular level, do the thing
-			if pool.currentFrame%5 == 0 then			
-				evaluateCurrent()
-			end
-			joypad.set(controller)
+		if CurrentRoomID == 0 and PreviousRoomID ~= 0 then --entered overworld from a level
+			timeout = timeout + 250 -- need an additional timeout extension so the new level can load. Once mario starts moving, it'll reset back to the constant
+			OWSwitch = 0
+			console.writeline("!!!!!!Beat level!!!!!!! " .. PreviousRoomID)
+		end
+
+		if CurrentRoomID ~= 0 and PreviousRoomID == 0 then  --and pool.generation < 5 then --entered a level from the overworld, but starting a few gens down so it's learned how to navigate already			
+			timeout = timeout + 250 -- need an additional timeout extension so the new level can load. Once mario starts moving, it'll reset back to the constant
+			rightmost = marioX
+			timeout = config.NeatConfig.TimeoutConstant --we need this here to keep the timeout "static" as long as mario is moving right
+
+
+		end
+
+		if pool.currentFrame%5 == 0 then			
+			evaluateCurrent()
+		end
+		joypad.set(controller)
 		
-		elseif CurrentRoomID ~= 0 and CurrentRoomID ~= PreviousRoomID  then --and OWSwitch == 0 then --timeout adjustment for sub-level transitions
-				timeout = timeout + 210	
-				rightmost = 0
-				OWSwitch = 1
-				console.writeline("sublevel timeout bonus added")
-
-			--end
-		elseif CurrentRoomID ~= 0 and PreviousRoomID == 0 then --transitioned from the overworld
-			timeout = timeout + 210
-			console.writeline("Start level timeout bonus")
-			
-		elseif CurrentRoomID == 0 and OWSwitch == 0 and (math.mod(timeout,80) == 0) then --if on overworld, and it's been 80 frames
-			local input = {Right = true, A=true} --start pushing A to enter the level
-			joypad.set(input, 1)
-			timeout = config.NeatConfig.TimeoutConstant --same timeout logic used in-level counter
-			
-
-		elseif CurrentRoomID == 0 and OWSwitch == 0 and (math.mod(timeout,60) == 0) then --if on overworld, and it's been 60 frames, then move around
-			timeout = timeout + 180	--we need more navigation time
-			local input = {Right = true, Up = False, Left = false, Down = false, A=false} 
-			joypad.set(input, 1)
-		elseif CurrentRoomID == 0 and OWSwitch == 0 and (math.mod(timeout,50) == 0) then 
-			local input = {Right = false, Up = true, Left = false, Down = false, A=false} 
-			joypad.set(input, 1)
-		elseif CurrentRoomID == 0 and OWSwitch == 0 and (math.mod(timeout,40) == 0) then 
-			local input = {Right = false, Up = False, Left = true, Down = false, A=false} 
-			joypad.set(input, 1)
-		elseif CurrentRoomID == 0 and OWSwitch == 0 and (math.mod(timeout,30) == 0) then 
-			local input = {Right = false, Up = False, Left = false, Down = true, A=false} 
-			joypad.set(input, 1)
+		if  CurrentRoomID == 0  then
+			if (math.mod(timeout,80) == 0) then --if on overworld, and it's been 80 frames
+				local input = {Right = true, Up = False, Left = false, Down = false, A=true} --start pushing A to enter the level
+				joypad.set(input, 1)
+			end
 		end
 
-
-		if CurrentRoomID ~= 0 and PreviousRoomID == 0 then
-			OWSwitch = 1 --entered a level, disable overworld navigation
-			timeout = timeout + 180 -- need an additional timeout extension so the new level can load. Once mario starts moving, it'll reset back to the constant
-		end
 
 		game.getPositions()
 		
@@ -832,16 +823,11 @@ while true do
 			timeout = config.NeatConfig.TimeoutConstant --we need this here to keep the timeout "static" as long as mario is moving right
 		end
 
-		
+	
 		message_box_timer = game.getMessageTimer()
 		if message_box_timer >0 and (math.mod(timeout,50)==0) then --we need a special handler to close out dialogues
-			--stuckTimer = stuckTimer -1
-			--if stuckTimer <=10 then
 			local input = {Right = false, Up = False, Left = false, Down = false, Y=false, B=false, X=false, A=true} --keep moving to the right
-			joypad.set(input, 1)
-				--timeout = config.NeatConfig.TimeoutConstant
-			--end
-			
+			joypad.set(input, 1)			
 		end
 
 
@@ -850,7 +836,6 @@ while true do
 		if checkMarioCollision == true then
 			if hitTimer > 0 then
 				marioHitCounter = marioHitCounter + 1
-				--console.writeline("Mario took damage, hit counter: " .. marioHitCounter)
 				checkMarioCollision = false
 			end
 		end
@@ -867,14 +852,20 @@ while true do
 			end
 		end
 		
-		Lives = game.getLives()
 
-		--if CurrentRoomID ~= 0 then
-			timeout = timeout - 1		
-		--end
+
+		timeout = timeout - 1
+		
 		timeoutBonus = pool.currentFrame / 4
 
-		--console.writeline("timeout is: " .. timeout)
+		local previousLives = Lives
+		Lives = game.getLives()
+
+		if Lives < previousLives then --if mario dies with a long timeoutBonus, it'll respawn and start moving without reinitializing. This prevents that issue
+			timeout = 0
+			timeoutBonus = 0
+		end
+
 
 		--##################################
 		--The timer ran out
@@ -882,6 +873,7 @@ while true do
 		-- then reload the savestate
 		--##################################
 		if timeout + timeoutBonus <= 0 then
+			--console.writeline("Timeout! " .. timeout)
 
 			local coins = game.getCoins() - startCoins
 			local score = game.getScore() - startScore
@@ -917,7 +909,7 @@ while true do
 				beatGame = 1
 				--end
 				fitness = fitness + 1000
-				console.writeline("!!!!!!Beat level!!!!!!!")
+				--console.writeline("!!!!!!Beat level!!!!!!!")
 			end
 			if fitness == 0 then
 				fitness = -1
@@ -926,7 +918,9 @@ while true do
 
 			
 			if fitness > pool.maxFitness then
-				console.writeline("MarI/O's fitness evolved from " .. pool.maxFitness .. " to " .. fitness .. " Gen " .. pool.generation)
+				console.writeline("MarI/O's fitness evolved from " .. pool.maxFitness .. " to " .. fitness .. " Gen " .. pool.generation .. " Species " .. pool.currentSpecies)
+				--console.writeline("coinScoreFitness - " .. coinScoreFitness .. " hitPenalty - " .. hitPenalty .. " powerUpBonus - " .. powerUpBonus .. " rightmost - " .. rightmost .. " topMost - " .. topMost .. " pool.currentFrame / 2 - " .. pool.currentFrame / 2)
+
 				pool.maxFitness = fitness
 				writeFile(forms.gettext(saveLoadFile) .. ".gen" .. pool.generation .. ".pool")
 				
@@ -941,10 +935,7 @@ while true do
 			while fitnessAlreadyMeasured() do
 				nextGenome()
 			end
-
-			--if beatGame == 0 then
-				initializeRun() --only reload the state if we haven't beat the level
-			--end
+			initializeRun() --only reload the state if we haven't beat the level
 
 		end
 
@@ -968,21 +959,28 @@ while true do
 		forms.settext(GenomeLabel, "Genome: " .. pool.currentGenome)
 		forms.settext(MeasuredLabel, "Measured: " .. math.floor(measured/total*100) .. "%")
 
-		forms.settext(FitnessLabel, "Fitness: " .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3))				
+		if fitness == nil then
+			fitness = 0
+		end
+
+		--forms.settext(FitnessLabel, "Fit: " .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3) .. " - " .. fitness)		
+		forms.settext(FitnessLabel, "Fit: " .. math.floor(rightmost - pool.currentFrame / 2)) --the original fitness formula -- i can't add the other bonuses until I change where they're loaded from		
 		forms.settext(MaxLabel, "Max: " .. math.floor(pool.maxFitness))
 		forms.settext(roomIDLabel, "Room ID: " .. CurrentRoomID)
 		
 		forms.settext(CoinsLabel, "Coins: " .. (game.getCoins() - startCoins))
 		forms.settext(ScoreLabel, "Score: " .. (game.getScore() - startScore))
 		forms.settext(DmgLabel, "Damage: " .. marioHitCounter)
-		forms.settext(timeoutLabel, "Timeout: " .. timeout)
+		forms.settext(timeoutLabel, "Timeout: " .. timeout .. " + " .. math.floor(timeoutBonus) .. " - " .. pool.currentFrame)
 
 		forms.settext(RightMostLabel, "Rightmost: " .. rightmost)
 		forms.settext(LivesLabel, "Lives: " .. Lives)
 		forms.settext(PowerUpLabel, "PowerUp: " .. powerUpCounter)
-		--forms.settext(algoFitnessLabel, "Algo Fitness: " .. fitness)
+		forms.settext(OWSwitchLabel, "marioY: " .. marioY .. " - " .. topMost)
 
 		pool.currentFrame = pool.currentFrame + 1
+
+		--console.writeline(topMost)
 	
 	end
 	emu.frameadvance();

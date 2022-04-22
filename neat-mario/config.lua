@@ -14,16 +14,20 @@ _M.PoolDir = _M.BizhawkDir .. "Lua/SNES/neat-mario/pool/"
 	Rearrange for other savestates. (will be redone soon)
 --]]
 _M.State = {
+	"Overworld_yellowboxes_YI3.state",
+	"YI4.state",				-- Yoshi's Island 4
+	"DP2.state",
+	"DP1.state",				-- Donut Plains 1	
+	"Overworld_yellowboxes_YI2.state",			
+	"YI2.state",				-- Yoshi's Island 2
 	"Overworld_yellowboxes.state",			
+	"YI3.state",				-- Yoshi's Island 3
+	"YI1.state",				-- Yoshi's Island 1					
+	"Intro.state",
 	"YS1.state",				--Yellow Switch Palace
 	"YH.state",					--Yoshi's house
-	"YI2.state",				-- Yoshi's Island 2
-	"YI1.state",				-- Yoshi's Island 1					
 	"Overworld.state",			
-	"YI3.state",				-- Yoshi's Island 2
-	"DP1.state",				-- Donut Plains 1
-	"DP2.state",
-	"Intro.state",
+
 }
 
 --[[
