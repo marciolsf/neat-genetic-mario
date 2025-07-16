@@ -6,18 +6,18 @@ local _M = {}
 --_M.BizhawkDir = "C:/Users/mmill/Downloads/BizHawk-2.2/"
 _M.BizhawkDir = "C:/Users/iamma/OneDrive/EveryLastGame/BizHawk-2.4.1 (snes NEAT ML code)/"
 
-_M.StateDir = _M.BizhawkDir .. "Lua/SNES/neat-genetic-mario/neat-mario/state/"
-_M.PoolDir = _M.BizhawkDir .. "Lua/SNES/neat-genetic-mario/neat-mario/pool/"
+_M.StateDir = _M.BizhawkDir .. "Lua/SNES/neat-genetic-mario/state/"
+_M.PoolDir = _M.BizhawkDir .. "Lua/SNES/neat-genetic-mario/pool/"
 
 --[[
 	At the moment the first in list will get loaded.
 	Rearrange for other savestates. (will be redone soon)
 --]]
 _M.State = {
+	"DP1.state",				-- Donut Plains 1	
 	"Overworld_yellowboxes_YI3.state",
 	"YI4.state",				-- Yoshi's Island 4
 	"DP2.state",
-	"DP1.state",				-- Donut Plains 1	
 	"Overworld_yellowboxes_YI2.state",			
 	"YI2.state",				-- Yoshi's Island 2
 	"Overworld_yellowboxes.state",			
